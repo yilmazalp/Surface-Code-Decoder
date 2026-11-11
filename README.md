@@ -1,6 +1,6 @@
 # Surface Code Decoding
 
-In this notebook, we aim to develop a minimum-weight decoder for nine-qubit rotated surface code. We will begin with creating binary representations (vectors) of stabilizers and logical operators. Then, we will build decoding graphs and evaluate recovery for every $Z$-error pattern.
+In this project, we aim to develop a minimum-weight decoder for nine-qubit rotated surface code. We will begin with creating binary representations (vectors) of stabilizers and logical operators. Then, we will build decoding graphs and evaluate recovery for every $Z$-error pattern.
 
 Now, the current model uses $Z$-only errors and syndrome measurements. Each qubit independently has a $Z$-error with probability $p$. Next, we are going to reveal circuit-based syndrome extraction in Qiskit.
 
