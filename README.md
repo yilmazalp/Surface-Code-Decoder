@@ -13,4 +13,3 @@ Now, the current model uses $Z$-only errors and syndrome measurements. Each qubi
 5. Build the minimum-weight decoder table
 6. Evaluate recovery and logical failure probability
 
-7. 
