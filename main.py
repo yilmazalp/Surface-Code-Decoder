@@ -49,36 +49,24 @@ def recovery(H_check, r, logical_op, stab_matrix):
         return None
 
 
-
 r = np.array([1, 1, 0, 0, 0, 1, 0, 0, 0])
 
 
 H_x = np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 1, 0, 1, 1, 0, 0, 0],
-                [0, 0, 0, 1, 1, 0, 1, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 1]])
+                    [0, 1, 1, 0, 1, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 1, 0, 1, 1, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 1]])
 
 H_z = np.array([[1, 1, 0, 1, 1, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 1, 1, 0, 1, 1]])
+                    [0, 0, 1, 0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 1, 1, 0, 1, 1]])
 
 logical_x = np.array([1, 0, 0, 1, 0, 0, 1, 0, 0])
 
-print(recovery(H_z, r, logical_x, H_x))
-
+recovery_op = recovery(H_z, r, logical_x, H_x)
 
 span_x = row_space(H_x)
-
-print(len(span_x))  # Expected: 16
-print(check_stabilizer(H_x, [1, 1, 0, 0, 0, 0, 0, 0, 0]))
-print(check_stabilizer(H_x, [1, 0, 0, 1, 0, 0, 1, 0, 0]))
-
-# print the X-checks that detect each single-qubit Z error
-for q in range(H_x.shape[1]):
-    checks = np.flatnonzero(H_x[:, q])
-    print(q, checks)
-
 
 # build the edges such that A_i's represent internal vertices, qubits (values from 0 to 8) are edges, left and right are boundaries
 edges = [
@@ -93,21 +81,37 @@ edges = [
     (8, "A3", "right")
 ]
 
-e = [0, 0, 0, 0, 0, 1, 0, 0, 0]
+if __name__ == '__main__':
 
-syndrome = (H_x @ e) % 2
-error = (H_x.transpose() @ syndrome)
-print(syndrome)
 
-qubits = []
-for edge in edges:
-    if "A1" in edge and ("left" in edge or "right" in edge):
-        qubits.append(edge[0])
+    print(recovery_op)
 
-print(qubits)
+    print(len(span_x))  # Expected: 16
 
-c = [0, 0, 1, 0, 0, 0, 0, 0, 0]
-print((H_x @ c) % 2)
+    print(check_stabilizer(H_x, [1, 1, 0, 0, 0, 0, 0, 0, 0]))
+    print(check_stabilizer(H_x, [1, 0, 0, 1, 0, 0, 1, 0, 0]))
+
+    # print the X-checks that detect each single-qubit Z error
+    for q in range(H_x.shape[1]):
+        checks = np.flatnonzero(H_x[:, q])
+        print(q, checks)
+
+
+    e = [0, 0, 0, 0, 0, 1, 0, 0, 0]
+
+    syndrome = (H_x @ e) % 2
+    error = (H_x.transpose() @ syndrome)
+    print(syndrome)
+
+    qubits = []
+    for edge in edges:
+        if "A1" in edge and ("left" in edge or "right" in edge):
+            qubits.append(edge[0])
+
+    print(qubits)
+
+    c = [0, 0, 1, 0, 0, 0, 0, 0, 0]
+    print((H_x @ c) % 2)
 
 
 
