@@ -1,24 +1,33 @@
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit_aer import AerSimulator
 import numpy as np
 import matplotlib.pyplot as plt
 from decoder_building import decoder_table, error_to_vector, H_z, logical_x, H_x, recovery
+from main import x_gate, z_gate
+from qiskit_aer.noise import pauli_error
 
 # initialize a quantum circuit with 4 ancilla qubit, 9 data qubits, and 4 classical bit
-qc = QuantumCircuit(13, 4)
+qubits = QuantumRegister(13, "q")
+syndrome_bits = ClassicalRegister(4, "syndrome")
+verification_bits = ClassicalRegister(4, "verification")
+
+qc = QuantumCircuit(qubits, syndrome_bits, verification_bits)
 
 
 # prepare the data qubits in product of 9 |+>
 for q in range(9):
     qc.h(q)
 
-# set errors on the qubits 0, 2, 4, 5
-qc.z(0)
-qc.z(2)
-qc.z(4)
-qc.z(5)
+# adding phase-flip noise to each data qubit
+p = 0.5
+z_noise = pauli_error([("I", 1 - p), ("Z", p)])
+noise_instruction = z_noise.to_instruction()
+
+for q in range(9):
+    qc.append(noise_instruction, [q])
 
 
+# add ancilla qubits and build the main structure
 for i, row in enumerate(H_x):
     a = 9 + i
 
@@ -33,35 +42,23 @@ for i, row in enumerate(H_x):
     # apply Hadamard to the ancilla
     qc.h(a)
 
-    # measure the ancilla and store the result in classical bit
-    qc.measure(a, i)
-
-
-# simulate the circuit
-backend = AerSimulator().run(qc, shots = 1024)
-result = backend.result()
-
-# extract the counts
-counts = result.get_counts(qc)
-print("Measurement counts:", counts)
-
-# reveal the syndrome
-measured_bits = next(iter(counts))
-syndrome = tuple(int(bit) for bit in measured_bits[::-1])
-
-# the syndrome
-print("Syndrome: ", syndrome)
-
-correction = decoder_table[syndrome]
-
-# the Pauli string that we need to apply for correction
-print("Correction we need to apply: ", correction)
+    # measure the ancilla and store the result in syndrome set
+    qc.measure(a, syndrome_bits[i])
 
 
 # correction
-for q in range(len(correction)):
-    if correction[q] == 'Z':
-        qc.z(q)
+for syndrome, correction in decoder_table.items():
+    # syndrome[0] is stored in classical bit 0
+    value = sum(int(bit) * 2**i for i, bit in enumerate(syndrome))
+
+    # apply the Z gates in 'correction' set
+    if "Z" in correction:
+        # comparing the syndrome bits with value
+        with qc.if_test((syndrome_bits, value)):
+            for q, symbol in enumerate(correction):
+                if symbol == "Z":
+                    qc.z(q)
+
 
 # rebuild the initial circuit without errors to verify the syndrome
 for i, row in enumerate(H_x):
@@ -73,21 +70,20 @@ for i, row in enumerate(H_x):
         qc.cx(a, q)
 
     qc.h(a)
-    qc.measure(a, i)
+    qc.measure(a, verification_bits[i])
 
 # run the circuit including correction and verification.
 verification = AerSimulator().run(qc, shots=1024).result()
 print("Residual syndrome counts:", verification.get_counts(qc))
 
-# Z-error is ZIZIZZIII
-error = np.array([1, 0, 1, 0, 1, 1, 0, 0, 0])
+verification_counts = {}
 
-# compute residual
-residual = (error + error_to_vector(correction))%2
+for measured_bits, count in verification.get_counts(qc).items():
+    verification_string, syndrome_string = measured_bits.split()
 
-# evaluate the recovery operation
-print("Is the code space preserved: ", recovery(H_z, residual, logical_x, H_x))
+    verification_counts[verification_string] = (verification_counts.get(verification_string, 0) + count)
 
+print("Verification counts:", verification_counts)
 
 qc.draw(output="mpl")
 plt.show()
